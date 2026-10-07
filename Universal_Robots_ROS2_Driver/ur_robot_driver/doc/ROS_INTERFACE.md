@@ -1,0 +1,301 @@
+**NOTE**: This documentation is obsolete and does not cover in full the current state of driver.
+
+# ROS interface
+
+The new driver for Universal Robots UR3, UR5 and UR10 robots with CB3 controllers and the e-series.
+
+## Nodes
+
+### ur_ros2_control_node
+
+This is the actual driver node containing the ROS2-Control stack. Interfaces documented here refer to the robot's hardware interface. Controller-specific API elements might be present for the individual controllers outside of this package.
+
+#### Parameters
+Note that parameters are passed through the ros2_control xacro definition.
+
+##### headless_mode
+
+Start robot in headless mode. This does not require the 'External Control' URCap to be running on the robot, but this will send the URScript to the robot directly. On e-Series robots this requires the robot to run in 'remote-control' mode.
+
+##### input_recipe_filename (Required)
+
+Path to the file containing the recipe used for requesting RTDE inputs.
+
+##### kinematics/hash (Required)
+
+Hash of the calibration reported by the robot. This is used for validating the robot description is using the correct calibration. If the robot's calibration doesn't match this hash, an error will be printed. You can use the robot as usual, however Cartesian poses of the endeffector might be inaccurate. See the "ur_calibration" package on help how to generate your own hash matching your actual robot.
+
+##### non_blocking_read (default: "false")
+
+Enables non_blocking_read mode. Disables error generated when read returns without any data, sets
+the read timeout to zero, and synchronizes read/write operations. This is a leftover from the ROS1
+driver and we currently see no real application where it would make sense to enable this.
+
+##### output_recipe_filename (Required)
+
+Path to the file containing the recipe used for requesting RTDE outputs.
+
+##### reverse_port (Required)
+
+Port that will be opened to communicate between the driver and the robot controller.
+
+##### robot_ip (Required)
+
+The robot's IP address.
+
+##### script_filename (Required)
+
+Path to the urscript code that will be sent to the robot.
+
+##### script_sender_port (Required)
+
+The driver will offer an interface to receive the program's URScript on this port.
+
+##### servoj_gain (Required)
+
+Specify the gain for the underlying servoj command. This will be used whenever position control is
+active. A higher value will lead to sharper motions, but might also introduce
+higher jerks and vibrations.
+
+Range: [100 - 3000]
+
+##### servoj_lookahead_time (Required)
+
+Specify lookahead_time parameter of underlying servoj command. This will be used whenever position
+control is active. A higher value will result in smoother trajectories, but will also introduce a
+higher delay between the commands sent from ROS and the motion being executed on the robot.
+
+Unit: seconds, range: [0.03 - 0.2]
+
+
+
+##### tool_baud_rate (Required)
+
+Baud rate used for tool communication. Will be set as soon as the UR-Program on the robot is started. See UR documentation for valid baud rates.  Note: This parameter is only evaluated, when the parameter "use_tool_communication" is set to TRUE.  Then, this parameter is required.
+
+##### tool_parity (Required)
+
+Parity used for tool communication. Will be set as soon as the UR-Program on the robot is started. Can be 0 (None), 1 (odd) and 2 (even).  Note: This parameter is only evaluated, when the parameter "use_tool_communication" is set to TRUE.  Then, this parameter is required.
+
+##### tool_rx_idle_chars (Required)
+
+Number of idle chars for the RX unit used for tool communication. Will be set as soon as the UR-Program on the robot is started. Valid values: min=1.0, max=40.0  Note: This parameter is only evaluated, when the parameter "use_tool_communication" is set to TRUE.  Then, this parameter is required.
+
+##### tool_stop_bits (Required)
+
+Number of stop bits used for tool communication. Will be set as soon as the UR-Program on the robot is started. Can be 1 or 2.  Note: This parameter is only evaluated, when the parameter "use_tool_communication" is set to TRUE.  Then, this parameter is required.
+
+##### tool_tx_idle_chars (Required)
+
+Number of idle chars for the TX unit used for tool communication. Will be set as soon as the UR-Program on the robot is started. Valid values: min=0.0, max=40.0  Note: This parameter is only evaluated, when the parameter "use_tool_communication" is set to TRUE.  Then, this parameter is required.
+
+##### tool_voltage (Required)
+
+Tool voltage that will be set as soon as the UR-Program on the robot is started. Note: This parameter is only evaluated, when the parameter "use_tool_communication" is set to TRUE. Then, this parameter is required.
+
+##### use_tool_communication (Required)
+
+Should the tool's RS485 interface be forwarded to the ROS machine? This is only available on e-Series models. Setting this parameter to TRUE requires multiple other parameters to be set,as well.
+
+
+### dashboard_client
+
+#### Advertised Services
+
+##### add_to_log ([ur_dashboard_msgs/AddToLog](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/AddToLog.html))
+
+Service to add a message to the robot's log. On PolyScope X this requires version >= 10.14.0.
+
+##### brake_release ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Service to release the brakes. If the robot is currently powered off, it will get powered on on the fly.
+
+##### clear_operational_mode ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+If this service is called the operational mode can again be changed from PolyScope, and the user password is enabled.
+
+##### close_popup ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Close a (non-safety) popup on the teach pendant. On PolyScope X this requires version >= 10.14.0.
+
+##### close_safety_popup ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Close a safety popup on the teach pendant. On PolyScope X this requires version >= 10.14.0.
+
+##### connect ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Service to connect or reconnect to the dashboard server. Required after startup when `autoconnect` is `false`.
+
+##### download_program ([ur_dashboard_msgs/Download](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/DownloadProgram.html))
+
+**PolyScope X only**: Download a program with the given name from the robot and save it as
+`*.urpx` file locally. This service is only available on a PolyScope X robot with version >=
+10.12.0.
+
+##### generate_flight_report ([ur_dashboard_msgs/GenerateFlightReport](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GenerateFlightReport.html))
+
+**CB3 | PolyScope 5 | PolyScope X >= 10.14.0** Generate flight report of the chosen type, defaults to SYSTEM. On PolyScope 5 / CB3 it is required to wait at least 30 seconds between triggering software or controller reports. On PolyScope X the `report_type` argument is ignored.
+
+##### generate_support_file ([ur_dashboard_msgs/GenerateSupportFile](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GenerateSupportFile.html))
+
+**CB3 | PolyScope 5** Generate a support file at the specified location. Location is relative to the programs folder, if saving to a subfolder it must exist prior to the service call.
+Defaults to saving to the programs folder. On PolyScope X use [download_support_file](#download_support_file) instead.
+
+##### download_support_file ([ur_dashboard_msgs/DownloadSupportFile](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/blob/main/ur_dashboard_msgs/srv/DownloadSupportFile.srv))
+
+**PolyScope X only (>= 10.14.0)**: Download the robot's support files as a zip archive to `target_path` on the machine running the dashboard client.
+
+##### get_loaded_program ([ur_dashboard_msgs/GetLoadedProgram](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetLoadedProgram.html))
+
+Get the name of the currently loaded program.
+
+##### get_operational_mode ([ur_dashboard_msgs/GetOperationalMode](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetOperationalMode.html))
+
+**PolyScope 5 | PolyScope X 10.12.0 onwards** Get current operational mode of the robot
+
+##### get_polyscope_version ([ur_dashboard_msgs/GetPolyScopeVersion](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetPolyScopeVersion.html))
+
+**CB3 | PolyScope 5 | PolyScope X >= 10.14.0** Get PolyScope version of the robot
+
+##### get_programs ([ur_dashboard_msgs/GetPrograms](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetPrograms.html))
+
+**PolyScope X only**: Get a list of all programs on the robot. This service is only available on a
+PolyScope X robot with version >= 10.12.0.
+
+##### get_robot_mode ([ur_dashboard_msgs/GetRobotMode](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetRobotMode.html))
+
+Service to query the current robot mode
+
+##### get_robot_model ([ur_dashboard_msgs/GetRobotModel](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetRobotModel.html))
+
+**CB3 | PolyScope 5 | PolyScope X >= 10.14.0** Get the robot model, in the format URx. It should be noted this call does not differentiate between e-series and CB3, so UR5 and UR5e will both report as UR5
+
+##### get_safety_mode ([ur_dashboard_msgs/GetSafetyMode](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetSafetyMode.html))
+
+Service to query the current safety mode
+
+##### get_safety_status ([ur_dashboard_msgs/GetSafetyStatus](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetSafetyStatus.html))
+
+**PolyScope 5 only** Get current safety status of the robot system, this is more detailed than get_safety_mode and should be preferred when possible
+
+##### get_serial_number ([ur_dashboard_msgs/GetSerialNumber](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetSerialNumber.html))
+
+**CB3 | PolyScope 5 | PolyScope X >= 10.14.0** Get serial number of robot
+
+##### get_user_role ([ur_dashboard_msgs/GetUserRole](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetUserRole.html))
+
+**CB3 only** Get current user role
+
+##### is_in_remote_control ([ur_dashboard_msgs/IsInRemoteControl](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/IsInRemoteControl.html))
+
+Service to query whether the robot is in remote control.
+
+##### load_installation ([ur_dashboard_msgs/Load](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/Load.html))
+
+Load a robot installation from a file
+
+##### load_program ([ur_dashboard_msgs/Load](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/Load.html))
+
+Load a robot program from a file on the robot. On PolyScope 5, this can be either file in the
+robot's programs folder or an absolute path to a file. The filename has to include the `.urp`
+ending. On PolyScope X, this has to be the program's name as shown in the Programs overview on the
+robot, without a `.urpx` suffix.
+
+##### pause ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Pause a running program.
+
+##### play ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Start execution of a previously loaded program
+
+##### popup ([ur_dashboard_msgs/Popup](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/Popup.html))
+
+Service to show a popup on the UR Teach pendant. On PolyScope X (>= 10.14.0) an optional `title`
+can be provided; on PolyScope 5 / CB3 the title is ignored.
+
+##### power_off ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Power off the robot motors
+
+##### power_on ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Power on the robot motors. To fully start the robot, call 'brake_release' afterwards.
+
+##### program_running ([ur_dashboard_msgs/IsProgramRunning](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/IsProgramRunning.html))
+
+Query whether there is currently a program running
+
+##### program_saved ([ur_dashboard_msgs/IsProgramSaved](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/IsProgramSaved.html))
+
+Query whether the current program is saved
+
+##### program_state ([ur_dashboard_msgs/GetProgramState](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetProgramState.html))
+
+Service to query the current program state
+
+##### quit ([ur_dashboard_msgs/GetLoadedProgram](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/GetLoadedProgram.html))
+
+Disconnect from the dashboard service.
+
+##### raw_request ([ur_dashboard_msgs/RawRequest](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/RawRequest.html))
+
+General purpose service to send arbitrary messages to the dashboard server
+
+##### restart_safety ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Used when robot gets a safety fault or violation to restart the safety. After safety has been rebooted the robot will be in Power Off. NOTE: You should always ensure it is okay to restart the system. It is highly recommended to check the error log before using this command (either via PolyScope or e.g. ssh connection).
+
+##### resume ([std_srvs/Trigger](http://docs.ros.org/en/rolling/p/std_srvs/srv/Trigger.html))
+
+**PolyScope X only**: Resume a paused program on a PolyScope X robot. This service is only available on a PolyScope X
+robot with version >= 10.11.0.
+
+##### set_operational_mode ([ur_dashboard_msgs/SetOperationalMode](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/SetOperationalMode.html))
+
+**PolyScope 5 only** Set operational mode of the robot. When this has been called, the teach pendant can not be used to change the operational mode until clear_operational_mode has been called.
+
+##### set_user_role ([ur_dashboard_msgs/SetUserRole](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/SetUserRole.html))
+
+**CB3 only** Set user role on the robot
+
+##### shutdown ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Shutdown the robot controller. On PolyScope X this requires version >= 10.14.0.
+
+##### stop ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Stop program execution on the robot
+
+##### unlock_protective_stop ([std_srvs/Trigger](https://docs.ros.org/en/humble/p/std_srvs/srv/Trigger.html))
+
+Dismiss a protective stop to continue robot movements. NOTE: It is the responsibility of the user to ensure the cause of the protective stop is resolved before calling this service.
+
+##### update_program ([ur_dashboard_msgs/UploadProgram](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/UploadProgram.html))
+
+**PolyScope X only**: Update a program on the robot. If the program does not exist or the program
+is currently loaded, this service call will fail. This service is only available on a PolyScope X
+robot with version >= 10.12.0.
+
+##### upload_program ([ur_dashboard_msgs/UploadProgram](https://docs.ros.org/en/humble/p/ur_dashboard_msgs/srv/UploadProgram.html))
+
+**PolyScope X only**: Upload a program to the robot. If a program with the same name already
+exists, this service call will fail. This service is only available on a PolyScope X robot with
+version >= 10.12.0.
+
+#### Parameters
+
+##### receive_timeout (Required)
+
+Timeout after which a call to the dashboard server will be considered failure if no answer has been received.
+
+##### robot_ip (Required)
+
+The IP address under which the robot is reachable.
+
+##### autoconnect (default: true)
+
+If `true` (default), the dashboard client connects to the robot during startup and retries until
+the connection succeeds or ROS is shut down. If `false`, the node starts without contacting the
+robot and only exposes the `~/connect` service until a connection succeeds; call `~/connect`
+once the robot is available to register the remaining dashboard services.
