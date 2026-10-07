@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<!--
+  UR3/UR3e + Robotiq 2F-85 gan tai tool0.
+    - grasp_tcp: tam kep giua 2 ngon (cach robotiq_85_base_link 0.145 m). Khi kep, tam khoi
+      lap phuong trung voi grasp_tcp va dau ngon cach mat ban ~4 mm.
+    - ign_ros2_control (Humble) khong ho tro khop mimic nen ca 6 khop ngon deu co command
+      interface; skill_server gui cung luc 6 gia tri theo he so mimic cua URDF.
+    - DetachableJoint: moi vat co mot plugin, gan/nha vat vao wrist_3_link qua topic
+      /gripper/<vat>/attach va /gripper/<vat>/detach. Day la rang buoc vat ly chong truot:
+      skill_server chi gan sau khi ngon kep da cham vat (doc /joint_states), khong dich chuyen
+      vat. Plugin tu gan vat khi khoi dong, skill_server nha tat ca luc khoi dong.
+-->
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="$(arg name)">
+  <xacro:arg name="name" default="ur"/>
+  <xacro:arg name="sim_ignition" default="false"/>
+  <xacro:arg name="tf_prefix" default=""/>
+  <xacro:arg name="grasp_objects"
+              default="red_cube yellow_cube blue_cube green_cube purple_cube"/>
+
+  <xacro:include filename="$(find ur_description)/urdf/ur.urdf.xacro"/>
+  <xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
+
+  <xacro:property name="p" value="$(arg tf_prefix)"/>
+
+  <xacro:robotiq_gripper name="RobotiqGripper" prefix="${p}" parent="${p}tool0"
+                         include_ros2_control="false">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:robotiq_gripper>
+
+  <link name="${p}grasp_tcp"/>
+  <joint name="${p}grasp_tcp_joint" type="fixed">
+    <parent link="${p}robotiq_85_base_link"/>
+    <child link="${p}grasp_tcp"/>
+    <origin xyz="0 0 0.145" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:macro name="gripper_joint" params="joint">
+    <joint name="${p}${joint}">
+      <command_interface name="position"/>
+      <state_interface name="position">
+        <param name="initial_value">0.0</param>
+      </state_interface>
+      <state_interface name="velocity"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="detachable_objects" params="names">
+    <xacro:if value="${len(names) > 0}">
+      <gazebo>
+        <plugin filename="ignition-gazebo-detachable-joint-system"
+                name="ignition::gazebo::systems::DetachableJoint">
+          <parent_link>${p}wrist_3_link</parent_link>
+          <child_model>${names[0]}</child_model>
+          <child_link>link</child_link>
+          <attach_topic>/gripper/${names[0]}/attach</attach_topic>
+          <detach_topic>/gripper/${names[0]}/detach</detach_topic>
+          <output_topic>/gripper/${names[0]}/state</output_topic>
+        </plugin>
+      </gazebo>
+      <xacro:detachable_objects names="${names[1:]}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:if value="$(arg sim_ignition)">
+    <ros2_control name="RobotiqGripper" type="system">
+      <hardware>
+        <plugin>ign_ros2_control/IgnitionSystem</plugin>
+      </hardware>
+      <xacro:gripper_joint joint="robotiq_85_left_knuckle_joint"/>
+      <xacro:gripper_joint joint="robotiq_85_right_knuckle_joint"/>
+      <xacro:gripper_joint joint="robotiq_85_left_inner_knuckle_joint"/>
+      <xacro:gripper_joint joint="robotiq_85_right_inner_knuckle_joint"/>
+      <xacro:gripper_joint joint="robotiq_85_left_finger_tip_joint"/>
+      <xacro:gripper_joint joint="robotiq_85_right_finger_tip_joint"/>
+    </ros2_control>
+
+    <xacro:detachable_objects names="${'$(arg grasp_objects)'.split()}"/>
+  </xacro:if>
+</robot>

@@ -1,0 +1,10 @@
+# Thong tin sinh vien - dung de ca nhan hoa nhiem vu.
+#   P = (2 chu so cuoi cua MSSV) mod 6 -> quyet dinh vat nao o zone A / B / C
+#   (bang quy uoc: llm_planner/student.py).
+# Hay thay bang ten va MSSV THAT cua ban truoc khi demo.
+# De MSSV trong dau nhay kep de ROS doc thanh chuoi.
+/**:
+  ros__parameters:
+    student:
+      name: "Vu Ngoc Son"
+      id: "23020764"

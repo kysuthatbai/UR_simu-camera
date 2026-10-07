@@ -1,0 +1,24 @@
+# Goi mot robot skill. Chi skill_server moi duoc phep dieu khien robot (qua MoveIt 2).
+#
+# Skill quan sat (camera, KHONG di chuyen robot):
+#   detect_objects                 : liet ke moi vat camera thay + vung chua vat
+#   check_zone      (zone)         : vung dang trong hay dang co vat nao
+#   find_object     (object)       : vi tri + vung cua mot vat
+#   find_free_position             : tim o trong tren ban -> luu lam "temporary_position"
+# Skill chuyen dong:
+#   home | pick(object) | place(object, zone) | move_above(object) | move_to_zone(zone)
+#   open_gripper | close_gripper
+# zone cua place / move_to_zone co the la "temporary_position" (ket qua find_free_position).
+string skill
+string object
+string zone
+---
+# SUCCESS | FAILED | INVALID_SKILL | INVALID_OBJECT | INVALID_ZONE | PLANNING_FAILED
+# EXECUTION_FAILED | OBJECT_NOT_HELD | GRIPPER_BUSY | NO_OBJECT_TO_GRASP
+# OBJECT_NOT_VISIBLE | ZONE_OCCUPIED | NO_FREE_SPACE
+string status
+string message
+# Ket qua dang JSON cua skill quan sat, vd check_zone:
+#   {"zone": "zone_b", "occupied": true, "object": "blue_cube"}
+# "" voi skill chuyen dong.
+string data

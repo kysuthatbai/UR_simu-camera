@@ -1,0 +1,29 @@
+# Cau hinh perception_node (camera RGB co dinh tren cao, nhin thang xuong mat ban).
+/**:
+  ros__parameters:
+    perception:
+      image_topic: "/camera/image"
+      camera_info_topic: "/camera/camera_info"
+      # Optical frame theo REP 103: z nhin ra truoc, x sang phai, y xuong duoi.
+      # TF world -> camera_link -> camera_optical_frame duoc publish trong launch/sim.launch.py.
+      camera_frame: "camera_optical_frame"
+
+      # Dien tich blob hop le = [min, max] x dien tich ky vong cua mat tren khoi.
+      # Khoi bi che mot phan (blob nho) -> khong cap nhat vi tri, giu vi tri quan sat gan nhat.
+      min_area_ratio: 0.6
+      max_area_ratio: 2.5
+      # Chi lay pixel co V >= ty le nay x V(90%) cua blob -> mat tren duoc chieu sang, bo mat ben
+      top_face_ratio: 0.85
+      # Khoi thuoc vung neu tam khoi cach tam vung <= zone_size / 2 + zone_margin (theo x va y)
+      zone_margin: 0.01
+
+      # Dai mau HSV theo thang OpenCV: [h_low, h_high, s_min, v_min], H: 0-179, S/V: 0-255.
+      # h_low > h_high: dai mau vong qua 0 (mau do). Do tren anh render cua Gazebo:
+      # do H=0, vang H=28, xanh la H=65, xanh duong H=110-113, tim H=144.
+      # Ngon kep / than robot co do bao hoa thap (< 100) nen khong bi nham voi khoi.
+      hsv:
+        red: [170, 8, 120, 50]
+        yellow: [20, 36, 120, 50]
+        green: [50, 80, 120, 50]
+        blue: [105, 125, 130, 50]
+        purple: [135, 160, 120, 50]

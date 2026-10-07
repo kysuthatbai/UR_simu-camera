@@ -1,0 +1,50 @@
+# Mo ta moi truong thao tac (dung chung cho perception_node, skill_server va llm_planner_node).
+# Tat ca toa do tinh trong frame "world" (trung voi base cua robot, mat ban o z = 0).
+#
+# KHONG co vi tri cua cac khoi o day: vi tri khoi va trang thai vung (trong / co vat) do camera
+# xac dinh (perception_node -> /perception/scene). File nay chi khai bao:
+#   - ten + mau cua tung khoi (mau -> dai HSV trong config/perception.yaml)
+#   - vi tri cac vung dat vat (ha tang co dinh, dung de dat vat chinh xac)
+#   - kich thuoc ban / khoi / vung
+/**:
+  ros__parameters:
+    world_frame: "world"
+
+    # Kich thuoc ban thao tac (hop chu nhat, mat tren o z = 0)
+    table_size: [0.90, 1.00, 0.75]
+    table_center: [0.15, 0.0, -0.375]
+
+    cube_size: 0.04
+
+    object_names: ["red_cube", "yellow_cube", "blue_cube", "green_cube", "purple_cube"]
+    objects:
+      red_cube:
+        color: "red"
+        description: "khoi lap phuong mau do / red cube"
+      yellow_cube:
+        color: "yellow"
+        description: "khoi lap phuong mau vang / yellow cube"
+      blue_cube:
+        color: "blue"
+        description: "khoi lap phuong mau xanh duong / blue cube"
+      green_cube:
+        color: "green"
+        description: "khoi lap phuong mau xanh la / green cube"
+      purple_cube:
+        color: "purple"
+        description: "khoi lap phuong mau tim / purple cube"
+
+    # Dung 3 vung dat vat. Khi vung dich bi chiem, vat dang chiem duoc chuyen toi vung dich cua
+    # no hoac ra mot o trong tren ban (skill place_on_table, o trong do camera xac dinh).
+    zone_names: ["zone_a", "zone_b", "zone_c"]
+    zones:
+      zone_a:
+        description: "vung A / o A / Zone A"
+        position: [0.282, 0.103, 0.0]
+      zone_b:
+        description: "vung B / o B / Zone B"
+        position: [0.212, 0.212, 0.0]
+      zone_c:
+        description: "vung C / o C / Zone C"
+        position: [0.103, 0.282, 0.0]
+    zone_size: 0.08

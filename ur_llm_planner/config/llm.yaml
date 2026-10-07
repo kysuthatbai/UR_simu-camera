@@ -1,0 +1,27 @@
+# Cau hinh ket noi LLM qua 9Router (endpoint tuong thich OpenAI).
+# - base_url: dia chi 9Router, mac dinh http://localhost:20128/v1 (xem dashboard 9Router).
+# - model   : ten model hoac combo da tao trong dashboard 9Router (BAT BUOC dien).
+# - api_key : API key tao trong dashboard 9Router. Nen de trong va dat bien moi truong
+#             NINEROUTER_API_KEY thay vi ghi key vao file.
+# - max_tokens/timeout : model "reasoning" (vd: gemini-3.8-flash) dung phan lon max_tokens de
+#             "nghi" truoc khi tra loi. max_tokens qua thap -> cau tra loi bi cat giua chung
+#             (JSON khong hop le). timeout qua thap -> "Loi khi goi LLM: timed out" voi cau lenh
+#             can suy luan nhieu buoc (vd: "Arrange all objects according to my student ID").
+/**:
+  ros__parameters:
+    llm:
+      base_url: "http://localhost:20128/v1"
+      model: "gemini/gemini-3.5-flash-lite"
+      api_key: "sk-abf27680a5dc6027-jyyi1q-970ab7b1"
+      timeout: 120.0
+      max_tokens: 4000
+      temperature: 0.0
+      # So lan gui loi cua Plan Validator lai cho LLM de no tu sua ke hoach
+      max_repair_attempts: 2
+
+    # false: chi sinh + kiem tra ke hoach, khong dieu khien robot (dry run)
+    execute: true
+    interactive: true
+    # true: in them cau tra loi tho cua LLM
+    verbose: false
+    skill_timeout: 120.0

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="$(arg name)">
+  <xacro:arg name="name" default="ur"/>
+  <xacro:arg name="prefix" default=""/>
+  <xacro:property name="p" value="$(arg prefix)"/>
+
+  <xacro:include filename="$(find ur_moveit_config)/srdf/ur_macro.srdf.xacro"/>
+  <xacro:ur_srdf name="$(arg name)" prefix="${p}"/>
+
+  <xacro:property name="gripper_links" value="${['robotiq_85_base_link',
+      'robotiq_85_left_knuckle_link', 'robotiq_85_left_finger_link',
+      'robotiq_85_left_inner_knuckle_link', 'robotiq_85_left_finger_tip_link',
+      'robotiq_85_right_knuckle_link', 'robotiq_85_right_finger_link',
+      'robotiq_85_right_inner_knuckle_link', 'robotiq_85_right_finger_tip_link']}"/>
+
+  <xacro:macro name="disable_with" params="first others">
+    <xacro:if value="${len(others) > 0}">
+      <disable_collisions link1="${p}${first}" link2="${p}${others[0]}" reason="Never"/>
+      <xacro:disable_with first="${first}" others="${others[1:]}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:macro name="disable_all_pairs" params="links">
+    <xacro:if value="${len(links) > 1}">
+      <xacro:disable_with first="${links[0]}" others="${links[1:]}"/>
+      <xacro:disable_all_pairs links="${links[1:]}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Cac khau cua gripper noi voi nhau qua co cau 4 khau, mesh chong len nhau -->
+  <xacro:disable_all_pairs links="${gripper_links}"/>
+  <disable_collisions link1="${p}robotiq_85_base_link" link2="${p}wrist_3_link" reason="Adjacent"/>
+</robot>

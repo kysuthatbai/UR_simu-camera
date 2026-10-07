@@ -1,0 +1,24 @@
+# Controller cho Robotiq 2F-85 trong Gazebo (nap bang spawner --param-file).
+# ign_ros2_control (Humble) khong ho tro khop mimic, nen dieu khien ca 6 khop ngon;
+# skill_server tinh gia tri tung khop theo he so mimic cua URDF.
+gripper_controller:
+  ros__parameters:
+    type: joint_trajectory_controller/JointTrajectoryController
+    joints:
+      - robotiq_85_left_knuckle_joint
+      - robotiq_85_right_knuckle_joint
+      - robotiq_85_left_inner_knuckle_joint
+      - robotiq_85_right_inner_knuckle_joint
+      - robotiq_85_left_finger_tip_joint
+      - robotiq_85_right_finger_tip_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.05
+      goal_time: 1.0

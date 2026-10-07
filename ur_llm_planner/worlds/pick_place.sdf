@@ -1,0 +1,381 @@
+<?xml version="1.0" ?>
+<!--
+  Moi truong pick & place cho UR3/UR3e:
+    - 01 ban thao tac (mat ban o z = 0, robot dat tren mat ban tai goc toa do)
+    - 01 camera RGB co dinh tren cao, nhin thang xuong (overhead_camera), gan tren gia chu L
+      nguoc dat tren san phia sau ban (camera_stand)
+    - 03 vung dat vat (chi co visual, khong co collision): zone_a, zone_b, zone_c
+    - 05 khoi lap phuong 4 cm: red_cube, yellow_cube, blue_cube, green_cube, purple_cube
+
+  Vi tri cac khoi CHI la trang thai ban dau cua mo phong. He thong KHONG doc cac gia tri nay:
+  vi tri vat va trang thai vung duoc xac dinh bang camera (perception_node).
+
+  Mau sac:
+    - Khoi: mau bao hoa, tach biet trong khong gian HSV de perception_node phan doan.
+    - Ban (xam dam) va cac vung (xam sang): do bao hoa thap, khong bi nham voi khoi.
+
+  Cac khoi la vat the dong (co khoi luong + collision): Robotiq 2F-85 kep bang ngon that,
+  sau khi xac nhan ngon da cham vat, plugin DetachableJoint (khai bao trong
+  urdf/ur_robotiq.urdf.xacro) khoa khoi vao gripper de khong bi truot. Ten model phai trung voi
+  grasp_objects cua xacro.
+-->
+<sdf version="1.6">
+  <world name="pick_place_world">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="ignition-gazebo-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <!-- Bat buoc cho camera: khong co plugin nay thi sensor khong render va khong phat anh -->
+    <plugin filename="ignition-gazebo-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <gui fullscreen="0">
+      <camera name="user_camera">
+        <pose>1.3 -0.9 0.9 0 0.45 2.55</pose>
+      </camera>
+    </gui>
+
+    <!-- Tat bong do: bong cua canh tay tren khoi lam lech phan doan mau cua camera -->
+    <light type="directional" name="sun">
+      <cast_shadows>false</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <pose>0 0 -0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>20 20</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>20 20</size></plane></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Ban thao tac: 0.90 x 1.00 x 0.75 m, mat tren o z = 0 -->
+    <model name="table">
+      <static>true</static>
+      <pose>0.15 0 -0.375 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.90 1.00 0.75</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.90 1.00 0.75</size></box></geometry>
+          <material>
+            <ambient>0.30 0.30 0.32 1</ambient>
+            <diffuse>0.30 0.30 0.32 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!--
+      Camera RGB tren cao, truc quang vuong goc mat ban (nhin thang xuong).
+      Camera Gazebo nhin theo truc +X cua link; RPY (0, pi/2, pi) quay +X xuong -Z cua world.
+      Khi do trong anh: u (sang phai) = +Y world, v (xuong duoi) = +X world.
+      Pose nay phai trung voi static TF world -> camera_link trong launch/sim.launch.py.
+    -->
+    <model name="overhead_camera">
+      <static>true</static>
+      <pose>0.15 0 1.5 0 1.5708 3.14159</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>0.04 0.10 0.04</size></box></geometry>
+          <material>
+            <ambient>0.1 0.1 0.1 1</ambient>
+            <diffuse>0.1 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+        <sensor name="overhead_camera" type="camera">
+          <always_on>1</always_on>
+          <update_rate>10</update_rate>
+          <visualize>false</visualize>
+          <topic>camera/image</topic>
+          <camera>
+            <horizontal_fov>0.70</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.1</near>
+              <far>5.0</far>
+            </clip>
+          </camera>
+        </sensor>
+      </link>
+    </model>
+
+    <!--
+      Gia camera chu L nguoc (nhom dinh hinh 40x40): de dat tren san phia sau ban (x = -0.75,
+      ngoai tam voi cua UR3/UR3e), cot dung len z = 1.62, tay ngang vuon toi phia tren camera,
+      thanh treo + tam kep giu overhead_camera. Toa do trong frame world.
+      Ngoai truong nhin cua overhead_camera: cot cach truc quang 0.9 m theo x (truc hep cua anh,
+      nua goc nhin ~0.27 rad), tay ngang / thanh treo nam phia sau camera (z > 1.5).
+      Chi la khung co dinh: pose camera van do model overhead_camera quyet dinh.
+    -->
+    <model name="camera_stand">
+      <static>true</static>
+      <pose>0 0 0 0 0 0</pose>
+      <link name="link">
+        <!-- De: tam thep 0.36 x 0.36 x 0.03 tren san (z = -0.75) -->
+        <collision name="base_collision">
+          <pose>-0.75 0 -0.735 0 0 0</pose>
+          <geometry><box><size>0.36 0.36 0.03</size></box></geometry>
+        </collision>
+        <visual name="base_visual">
+          <pose>-0.75 0 -0.735 0 0 0</pose>
+          <geometry><box><size>0.36 0.36 0.03</size></box></geometry>
+          <material>
+            <ambient>0.15 0.15 0.16 1</ambient>
+            <diffuse>0.15 0.15 0.16 1</diffuse>
+          </material>
+        </visual>
+        <!-- Cot dung: z = -0.72 .. 1.62 -->
+        <collision name="pole_collision">
+          <pose>-0.75 0 0.45 0 0 0</pose>
+          <geometry><box><size>0.04 0.04 2.34</size></box></geometry>
+        </collision>
+        <visual name="pole_visual">
+          <pose>-0.75 0 0.45 0 0 0</pose>
+          <geometry><box><size>0.04 0.04 2.34</size></box></geometry>
+          <material>
+            <ambient>0.70 0.70 0.72 1</ambient>
+            <diffuse>0.70 0.70 0.72 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+        </visual>
+        <!-- Khop goc noi cot dung va tay ngang -->
+        <visual name="corner_visual">
+          <pose>-0.75 0 1.60 0 0 0</pose>
+          <geometry><box><size>0.06 0.06 0.06</size></box></geometry>
+          <material>
+            <ambient>0.15 0.15 0.16 1</ambient>
+            <diffuse>0.15 0.15 0.16 1</diffuse>
+          </material>
+        </visual>
+        <!-- Tay ngang: x = -0.75 .. 0.20, z = 1.58 .. 1.62 -->
+        <visual name="arm_visual">
+          <pose>-0.275 0 1.60 0 0 0</pose>
+          <geometry><box><size>0.95 0.04 0.04</size></box></geometry>
+          <material>
+            <ambient>0.70 0.70 0.72 1</ambient>
+            <diffuse>0.70 0.70 0.72 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+        </visual>
+        <!-- Thanh treo tu tay ngang xuong mat tren camera (z = 1.52 .. 1.58) -->
+        <visual name="hanger_visual">
+          <pose>0.15 0 1.55 0 0 0</pose>
+          <geometry><cylinder><radius>0.008</radius><length>0.06</length></cylinder></geometry>
+          <material>
+            <ambient>0.15 0.15 0.16 1</ambient>
+            <diffuse>0.15 0.15 0.16 1</diffuse>
+          </material>
+        </visual>
+        <!-- Tam kep om mat tren camera -->
+        <visual name="clamp_visual">
+          <pose>0.15 0 1.523 0 0 0</pose>
+          <geometry><box><size>0.06 0.12 0.006</size></box></geometry>
+          <material>
+            <ambient>0.15 0.15 0.16 1</ambient>
+            <diffuse>0.15 0.15 0.16 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Vung dat vat: tam phang mong mau xam sang, chi hien thi -->
+    <model name="zone_a">
+      <static>true</static>
+      <pose>0.282 0.103 0.001 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>0.08 0.08 0.002</size></box></geometry>
+          <material>
+            <ambient>0.85 0.85 0.85 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="zone_b">
+      <static>true</static>
+      <pose>0.212 0.212 0.001 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>0.08 0.08 0.002</size></box></geometry>
+          <material>
+            <ambient>0.85 0.85 0.85 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="zone_c">
+      <static>true</static>
+      <pose>0.103 0.282 0.001 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>0.08 0.08 0.002</size></box></geometry>
+          <material>
+            <ambient>0.85 0.85 0.85 1</ambient>
+            <diffuse>0.85 0.85 0.85 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!--
+      Khoi lap phuong 4 cm. Trang thai ban dau (kich ban demo "Put the red cube in Zone B."):
+      blue_cube nam trong zone_b, green_cube nam trong zone_c, ba khoi con lai (red, yellow,
+      purple) nam tren ban, ngoai moi vung.
+    -->
+    <model name="red_cube">
+      <pose>0.246 -0.172 0.020 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.05</mass>
+          <inertia>
+            <ixx>1.33e-5</ixx><iyy>1.33e-5</iyy><izz>1.33e-5</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.04 0.04 0.04</size></box></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.04 0.04 0.04</size></box></geometry>
+          <material>
+            <ambient>0.9 0.05 0.05 1</ambient>
+            <diffuse>0.9 0.05 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="yellow_cube">
+      <pose>0.150 -0.260 0.020 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.05</mass>
+          <inertia>
+            <ixx>1.33e-5</ixx><iyy>1.33e-5</iyy><izz>1.33e-5</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.04 0.04 0.04</size></box></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.04 0.04 0.04</size></box></geometry>
+          <material>
+            <ambient>0.95 0.85 0.05 1</ambient>
+            <diffuse>0.95 0.85 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="blue_cube">
+      <pose>0.212 0.212 0.020 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.05</mass>
+          <inertia>
+            <ixx>1.33e-5</ixx><iyy>1.33e-5</iyy><izz>1.33e-5</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.04 0.04 0.04</size></box></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.04 0.04 0.04</size></box></geometry>
+          <material>
+            <ambient>0.05 0.2 0.95 1</ambient>
+            <diffuse>0.05 0.2 0.95 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="green_cube">
+      <pose>0.103 0.282 0.020 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.05</mass>
+          <inertia>
+            <ixx>1.33e-5</ixx><iyy>1.33e-5</iyy><izz>1.33e-5</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.04 0.04 0.04</size></box></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.04 0.04 0.04</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.1 1</ambient>
+            <diffuse>0.05 0.75 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="purple_cube">
+      <pose>0.295 -0.052 0.020 0 0 0</pose>
+      <link name="link">
+        <inertial>
+          <mass>0.05</mass>
+          <inertia>
+            <ixx>1.33e-5</ixx><iyy>1.33e-5</iyy><izz>1.33e-5</izz>
+            <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+          </inertia>
+        </inertial>
+        <collision name="collision">
+          <geometry><box><size>0.04 0.04 0.04</size></box></geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.04 0.04 0.04</size></box></geometry>
+          <material>
+            <ambient>0.6 0.05 0.85 1</ambient>
+            <diffuse>0.6 0.05 0.85 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>
